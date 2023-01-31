@@ -2,9 +2,9 @@
   "name": "mcquack",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "./code/js/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node ."
   },
   "repository": {
     "type": "git",
@@ -16,5 +16,9 @@
   "bugs": {
     "url": "https://github.com/Codemaine/McQuack/issues"
   },
-  "homepage": "https://github.com/Codemaine/McQuack#readme"
+  "homepage": "https://github.com/Codemaine/McQuack#readme",
+  "dependencies": {
+    "discord.js": "^14.7.1",
+    "dotenv": "^16.0.3"
+  }
 }
