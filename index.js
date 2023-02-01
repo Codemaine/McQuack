@@ -1,53 +1,37 @@
-const { REST } = require('@discordjs/rest')
-const { Client, GatewayIntentBits, Partials } = require('discord.js');
-const { Routes } = require('discord-api-types/v9')
-const client = new Client({ intents: [GatewayIntentBits.Guilds], partials: [Partials.Channel] });
+const fs = require('node:fs');
+const path = require('node:path');
+const { Client, Collection, Events, GatewayIntentBits, REST, Routes } = require('discord.js');
+const { token, clientId } = require('./config.json');
 
-const fs = require('fs')
-const path = require('path')
+const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
-let commandTmp = []
-let commands = []
+client.commands = new Collection();
+const commandsPath = path.join(__dirname, 'commands');
+const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 
-require('dotenv').config({
-    path: path.join(__dirname, '.env'),
-})
+for (const file of commandFiles) {
+	const filePath = path.join(commandsPath, file);
+	const command = require(filePath);
+	client.commands.set(command.data.name, command);
+}
 
-const token = process.env.DISCORD_TOKEN
+client.once(Events.ClientReady, () => {
+	console.log('Ready!');
+});
 
-client.once('ready', () => {
-    console.log('Bot Ready!')
+client.on(Events.InteractionCreate, async interaction => {
+	if (!interaction.isChatInputCommand()) return;
 
-    let commandsFiles = fs.readdirSync(path.join(__dirname, './commands'))
+	const command = client.commands.get(interaction.commandName);
 
-    commandsFiles.forEach((file, i) => {
-        commandTmp[i] = require('./commands/' + file)
-        commands = [
-            ...commands,
-            {
-                name: file.split('.')[0],
-                description: commandTmp[i].description,
-                init: commandTmp[i].init,
-                options: commandTmp[i].options,
-            },
-        ]
-    })
+	if (!command) return;
 
-    const rest = new REST({ version: '9' }).setToken(token)
-    rest.put(Routes.applicationCommands(client.application.id), {
-        body: commands,
-    })
-        .then(() => {
-            console.log('Commands registered!')
-        })
-        .catch(console.error)
-})
+	try {
+		await command.execute(interaction);
+	} catch (error) {
+		console.error(error);
+		await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
+	}
+});
 
-client.on('interactionCreate', async interaction => {
-    if (!interaction.isCommand()) return
-    const { commandName } = interaction
-    const selectedCommand = commands.find(c => commandName === c.name)
-    selectedCommand.init(interaction, client)
-})
-
-client.login(token)
+client.login(token);
